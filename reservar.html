@@ -58,7 +58,8 @@
   </section>
   <section class="page-body">
     <div class="wrap">
-      <div class="booking">
+      <div class="pay-status" id="payStatus" hidden aria-live="polite"></div>
+      <div class="booking" id="booking">
         <div class="bk-main" id="bkMain">
           <div class="bk-step">
             <label class="bk-label" for="bkTreat"><span>01</span> Tratamiento</label>
@@ -102,10 +103,11 @@
             <div class="sum-row"><span>Horario</span><span id="sumHour">—</span></div>
             <div class="sum-row"><span>Duración</span><span id="sumDur">—</span></div>
             <div class="sum-row"><span>Precio</span><span id="sumPrice">—</span></div>
+            <div class="sum-row" id="sumSenaRow" hidden><span>Seña para confirmar</span><span id="sumSena"></span></div>
           </div>
           <p class="policy" id="sumNote"></p>
           <button class="btn btn-solid" id="bkConfirm" disabled>Confirmar turno</button>
-          <p class="policy">Podés reprogramar sin costo hasta 24 h antes. Para cancelar, escribinos por WhatsApp.</p>
+          <p class="policy" id="sumPolicy">Podés reprogramar sin costo hasta 24 h antes. Para cancelar, escribinos por WhatsApp.</p>
         </aside>
       </div>
     </div>

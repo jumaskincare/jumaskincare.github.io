@@ -557,3 +557,16 @@ body.menu-open { overflow: hidden; }
 @media (max-width: 760px) { .gift-band { grid-template-columns: 1fr; border-radius: 22px; } .gb-visual { height: 210px; } }
 .menu-panel .wrap { width: 100%; }
 .cal.is-loading { opacity: .5; pointer-events: none; }
+
+/* ---------- seña y regreso de Mercado Pago ---------- */
+.pay-status { max-width: 620px; margin: 0 auto; background: var(--surface); border: 1px solid var(--line); border-radius: 22px; box-shadow: var(--shadow); padding: clamp(28px, 5vw, 48px); }
+.pay-status .done { justify-items: start; }
+.pay-status h3 { font-family: var(--display); font-weight: 300; font-size: clamp(26px, 3.4vw, 34px); }
+.pay-amount { font-family: var(--display); font-weight: 300; font-size: 34px; font-variant-numeric: tabular-nums; }
+.pay-timer { font-variant-numeric: tabular-nums; color: var(--sage-deep); font-weight: 400; }
+.spinner { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--sage-soft); border-top-color: var(--sage-deep); animation: spin 1s linear infinite; }
+.mp-btn { background: #009ee3; color: #fff; }
+.mp-btn:hover { background: #0089c7; }
+.done .btn { width: 100%; }
+.bk-main.locked { opacity: .4; pointer-events: none; transition: opacity .3s; }
+.bk-side { scroll-margin-top: 96px; }

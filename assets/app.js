@@ -61,6 +61,7 @@
   const lastDay = new Date(today); lastDay.setDate(lastDay.getDate() + MAX_DAYS - 1);
   const booked = new Set(store.get("juma_demo_booked", []));
   const real = {};   // servicio → { "2026-10-22": ["09:00", ...] }
+  let senaInfo = null; // { activa, monto, minutos, politica } — lo informa el script
   function hash(s) { let h = 2166136261; for (const c of s) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
   function demoSlots(day, dur) {
     if (day < today || day > lastDay || HOLIDAYS.includes(iso(day))) return [];
@@ -87,6 +88,7 @@
     const j = await r.json();
     if (!j.ok) throw new Error(j.error || "Error");
     real[treat.id] = j.dias;
+    if (j.sena) senaInfo = j.sena;
   }
   const bookable = TREATS.filter((t) => !t.consult);
 
@@ -133,7 +135,66 @@
   }
 
   /* ---------------- página Reservar ---------------- */
-  if ($("#bkMain")) {
+  const CHECK = '<div class="done-icon"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6"><path d="m5 12 4.5 4.5L19 7"/></svg></div>';
+  const fmtIso = (f) => { const [y, m, d] = f.split("-").map(Number); return fmtDay(new Date(y, m - 1, d)); };
+  function doneHTML(t) {   // t = { nombre, tratamiento, fecha, hora, codigo, pagada, nota }
+    const msg = `Hola Carla! Reservé desde la web:\n• ${t.tratamiento}\n• ${fmtIso(t.fecha)} a las ${t.hora}\n• A nombre de ${t.nombre}` + (t.codigo ? `\n• Código: ${t.codigo}` : "");
+    return `
+      <div class="done">
+        ${CHECK}
+        <div class="eyebrow">Turno confirmado</div>
+        <h3>${t.nombre.split(" ")[0]}, te esperamos</h3>
+        <div class="summary" style="width:100%">
+          <div class="sum-row"><span>Tratamiento</span><span>${t.tratamiento}</span></div>
+          <div class="sum-row"><span>Cuándo</span><span>${fmtIso(t.fecha)} a las ${t.hora} h</span></div>
+          <div class="sum-row"><span>Dónde</span><span>Fragata Argentina 2063, of. 3</span></div>
+          ${t.pagada ? `<div class="sum-row"><span>Seña</span><span>Pagada ✓</span></div>` : ""}
+          ${t.codigo ? `<div class="sum-row"><span>Código</span><span><strong>${t.codigo}</strong></span></div>` : ""}
+        </div>
+        ${t.nota ? `<p class="policy">${t.nota}</p>` : ""}
+        <p class="policy">${API ? "Tu turno ya quedó agendado. Si necesitás cambiarlo o cancelarlo, escribinos por WhatsApp con tu código." : "Esta es una demostración: el turno no se agenda. Podés avisarle a Carla con el botón."}</p>
+        <a class="btn btn-solid" href="https://wa.me/${WA}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">${API ? "Guardar el turno en WhatsApp" : "Avisar por WhatsApp"}</a>
+        <a class="btn btn-line" href="reservar.html">Reservar otro turno</a>
+      </div>`;
+  }
+
+  /* regreso desde Mercado Pago: reservar.html?c=CODIGO */
+  const back = new URLSearchParams(location.search);
+  if ($("#bkMain") && API && back.get("c")) {
+    const codigo = back.get("c").toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const box = $("#payStatus"); $("#booking").hidden = true; box.hidden = false;
+    const wait = (txt) => { box.innerHTML = `<div class="done"><div class="spinner" aria-hidden="true"></div><h3>${txt}</h3><p class="policy">No cierres esta página.</p></div>`; };
+    wait("Estamos confirmando tu pago…");
+    let tries = 0;
+    const check = async () => {
+      tries++;
+      let j;
+      try { j = await (await fetch(API + "?accion=estado&codigo=" + codigo)).json(); } catch (e) { j = { ok: false }; }
+      if (j.ok && j.estado === "confirmado") {
+        const tr = TREATS.find((x) => x.id === j.turno.servicio) || {};
+        box.innerHTML = doneHTML({ nombre: j.turno.nombre, tratamiento: tr.name || j.turno.tratamiento, fecha: j.turno.fecha, hora: j.turno.hora, codigo, pagada: true, nota: tr.note });
+        try { sessionStorage.removeItem("juma_pago_" + codigo); } catch (e) {}
+        toast("¡Turno confirmado!"); return;
+      }
+      if (j.ok && j.estado === "vencido") {
+        box.innerHTML = `<div class="done"><div class="eyebrow">Turno no confirmado</div><h3>Se venció el tiempo para pagar</h3>
+          <p class="policy">Como no recibimos la seña a tiempo, liberamos el horario. Si pagaste y ves este mensaje, escribinos por WhatsApp con el código <strong>${codigo}</strong>.</p>
+          <a class="btn btn-solid" href="reservar.html">Elegir otro horario</a>
+          <a class="btn btn-line" href="https://wa.me/${WA}?text=${encodeURIComponent("Hola Carla! Tuve un problema con la seña del turno " + codigo + ".")}" target="_blank" rel="noopener">Escribir por WhatsApp</a></div>`;
+        return;
+      }
+      if (tries < (back.get("fallo") ? 2 : 8)) { setTimeout(check, 3000); return; }
+      let link = ""; try { link = sessionStorage.getItem("juma_pago_" + codigo) || ""; } catch (e) {}
+      box.innerHTML = `<div class="done"><div class="eyebrow">Pago sin confirmar</div><h3>${back.get("fallo") ? "El pago no se completó" : "Todavía no vemos tu pago"}</h3>
+        <p class="policy">Tu horario sigue reservado unos minutos más. ${link ? "Podés volver a intentar el pago." : "Si ya pagaste, la confirmación puede demorar unos minutos."}</p>
+        ${link ? `<a class="btn btn-solid mp-btn" href="${link}">Volver a intentar el pago</a>` : ""}
+        <button class="btn btn-line" type="button" id="reCheck">Ya pagué, revisar de nuevo</button></div>`;
+      $("#reCheck").addEventListener("click", () => { tries = 0; wait("Revisando tu pago…"); check(); });
+    };
+    check();
+  }
+
+  else if ($("#bkMain")) {
     const pre = new URLSearchParams(location.search).get("t");
     const bk = { treat: bookable.find((t) => t.id === pre) || bookable[0], month: new Date(today.getFullYear(), today.getMonth(), 1), day: null, slot: null, done: false, loading: false, error: "" };
     $("#bkTreat").innerHTML = bookable.map((t) => `<option value="${t.id}">${t.name} · ${t.dur} min · ${money(t.price)}</option>`).join("");
@@ -194,31 +255,43 @@
       $("#sumDur").textContent = bk.treat.dur + " min";
       $("#sumPrice").textContent = money(bk.treat.price);
       $("#sumNote").textContent = bk.treat.note || "";
-      $("#bkConfirm").disabled = !(bk.day && bk.slot) || bk.sending;
+      const sena = senaInfo && senaInfo.activa;
+      $("#sumSenaRow").hidden = !sena;
+      if (sena) { $("#sumSena").textContent = money(senaInfo.monto); $("#sumPolicy").textContent = senaInfo.politica; }
+      const btn = $("#bkConfirm");
+      if (!bk.sending) btn.textContent = sena ? "Continuar al pago de la seña" : "Confirmar turno";
+      btn.disabled = !(bk.day && bk.slot) || bk.sending;
     }
     function renderBooking() { renderCal(); renderSlots(); renderSummary(); }
 
-    function showDone(name, codigo) {
+    function lockForm() {
+      $("#bkMain").classList.add("locked");
+      $("#bkSide").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+    }
+    function showPay(j, name) {
       bk.done = true;
-      const when = fmtDay(bk.day) + " a las " + bk.slot.label;
-      const msg = `Hola Carla! Reservé desde la web:\n• ${bk.treat.name}\n• ${when}\n• A nombre de ${name}` + (codigo ? `\n• Código: ${codigo}` : "");
+      try { sessionStorage.setItem("juma_pago_" + j.codigo, j.pago); } catch (e) {}
+      const fin = Date.now() + j.minutos * 60000;
       $("#bkSide").innerHTML = `
         <div class="done">
-          <div class="done-icon"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6"><path d="m5 12 4.5 4.5L19 7"/></svg></div>
-          <div class="eyebrow">Turno reservado</div>
-          <h3>${name.split(" ")[0]}, te esperamos</h3>
+          <div class="eyebrow">Último paso</div>
+          <h3>Pagá la seña para confirmar</h3>
           <div class="summary" style="width:100%">
             <div class="sum-row"><span>Tratamiento</span><span>${bk.treat.name}</span></div>
-            <div class="sum-row"><span>Cuándo</span><span>${when} h</span></div>
-            <div class="sum-row"><span>Dónde</span><span>Fragata Argentina 2063, of. 3</span></div>
-            ${codigo ? `<div class="sum-row"><span>Código</span><span><strong>${codigo}</strong></span></div>` : ""}
+            <div class="sum-row"><span>Cuándo</span><span>${fmtDay(bk.day)} a las ${bk.slot.label} h</span></div>
+            <div class="sum-row"><span>A nombre de</span><span>${name}</span></div>
           </div>
-          ${bk.treat.note ? `<p class="policy">${bk.treat.note}</p>` : ""}
-          <p class="policy">${API ? "Tu turno ya quedó agendado. Si necesitás cambiarlo o cancelarlo, escribinos por WhatsApp." : "Esta es una demostración: el turno no se agenda. Podés avisarle a Carla con el botón."}</p>
-          <a class="btn btn-solid" href="https://wa.me/${WA}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">${API ? "Guardar el turno en WhatsApp" : "Avisar por WhatsApp"}</a>
-          <button class="btn btn-line" id="bkAgain" type="button">Reservar otro turno</button>
+          <div class="pay-amount">${money(j.sena.monto)}</div>
+          <p class="policy">Te guardamos el horario durante <span class="pay-timer" id="payTimer">${j.minutos}:00</span> min. ${j.sena.politica}</p>
+          <a class="btn btn-solid mp-btn" href="${j.pago}">Pagar con Mercado Pago</a>
+          <p class="policy">Al terminar el pago volvés a esta página y tu turno queda confirmado.</p>
         </div>`;
-      $("#bkAgain").addEventListener("click", () => location.reload());
+      const tick = () => {
+        const left = Math.max(0, fin - Date.now()), el = $("#payTimer"); if (!el) return;
+        el.textContent = Math.floor(left / 60000) + ":" + pad(Math.floor(left / 1000) % 60);
+        if (left > 0) setTimeout(tick, 1000);
+      };
+      tick(); lockForm();
     }
 
     $("#bkConfirm").addEventListener("click", async () => {
@@ -229,10 +302,12 @@
       err.textContent = "";
       if (!API) {
         booked.add(bk.slot.key); store.set("juma_demo_booked", [...booked]);
-        showDone(name, ""); renderCal(); renderSlots(); toast("Turno reservado (demo)"); return;
+        bk.done = true;
+        $("#bkSide").innerHTML = doneHTML({ nombre: name, tratamiento: bk.treat.name, fecha: iso(bk.day), hora: bk.slot.label, nota: bk.treat.note });
+        renderCal(); renderSlots(); lockForm(); toast("Turno reservado (demo)"); return;
       }
       const btn = $("#bkConfirm");
-      bk.sending = true; btn.disabled = true; btn.textContent = "Reservando…";
+      bk.sending = true; btn.disabled = true; btn.textContent = "Un momento…";
       try {
         const r = await fetch(API, {
           method: "POST",
@@ -241,13 +316,18 @@
                                  comentario: $("#bkNote").value.trim(), web: $("#bkWeb") ? $("#bkWeb").value : "" })
         });
         const j = await r.json();
-        if (j.ok) { showDone(name, j.codigo); toast("¡Turno reservado!"); return; }
+        if (j.ok && j.estado === "pendiente" && j.pago) { showPay(j, name); return; }
+        if (j.ok) {
+          bk.done = true;
+          $("#bkSide").innerHTML = doneHTML({ nombre: name, tratamiento: bk.treat.name, fecha: iso(bk.day), hora: bk.slot.label, codigo: j.codigo, nota: bk.treat.note });
+          lockForm(); toast("¡Turno reservado!"); return;
+        }
         err.textContent = j.error || "No pudimos reservar. Probá de nuevo.";
         if (j.ocupado) { bk.slot = null; await refresh(true); }
       } catch (e) {
         err.textContent = "No pudimos reservar por un problema de conexión. Probá de nuevo o escribinos por WhatsApp.";
       } finally {
-        bk.sending = false; btn.textContent = "Confirmar turno"; renderSummary();
+        bk.sending = false; renderSummary();
       }
     });
     refresh();
