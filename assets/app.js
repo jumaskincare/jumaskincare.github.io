@@ -137,8 +137,23 @@
   /* ---------------- página Reservar ---------------- */
   const CHECK = '<div class="done-icon"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6"><path d="m5 12 4.5 4.5L19 7"/></svg></div>';
   const fmtIso = (f) => { const [y, m, d] = f.split("-").map(Number); return fmtDay(new Date(y, m - 1, d)); };
-  function doneHTML(t) {   // t = { nombre, tratamiento, fecha, hora, codigo, pagada, nota }
-    const msg = `Hola Carla! Reservé desde la web:\n• ${t.tratamiento}\n• ${fmtIso(t.fecha)} a las ${t.hora}\n• A nombre de ${t.nombre}` + (t.codigo ? `\n• Código: ${t.codigo}` : "");
+  /* "Agregar a mi calendario": Google Calendar o archivo .ics (iPhone, Outlook y otros) */
+  function calLinks(t) {
+    const ini = new Date(t.fecha + "T" + t.hora + ":00-03:00"), fin = new Date(+ini + (t.dur || 60) * 60000);
+    const z = (d) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+    const titulo = "Juma Skincare · " + t.tratamiento, lugar = "Juma Skincare, Fragata Argentina 2063, Oficina 3, Pilar";
+    const det = "Turno de " + t.tratamiento + (t.codigo ? " · Código " + t.codigo : "") + ". Cambios: WhatsApp 11 3903-7489.";
+    const g = "https://calendar.google.com/calendar/render?action=TEMPLATE&text=" + encodeURIComponent(titulo) + "&dates=" + z(ini) + "/" + z(fin) +
+              "&details=" + encodeURIComponent(det) + "&location=" + encodeURIComponent(lugar);
+    const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Juma Skincare//Turnos//ES", "BEGIN:VEVENT", "UID:" + (t.codigo || z(ini)) + "@jumaskincare",
+                 "DTSTAMP:" + z(new Date()), "DTSTART:" + z(ini), "DTEND:" + z(fin), "SUMMARY:" + titulo, "LOCATION:" + lugar.replace(/,/g, "\\,"),
+                 "DESCRIPTION:" + det.replace(/,/g, "\\,"), "BEGIN:VALARM", "TRIGGER:-P1D", "ACTION:DISPLAY", "DESCRIPTION:Turno en Juma mañana", "END:VALARM",
+                 "BEGIN:VALARM", "TRIGGER:-PT2H", "ACTION:DISPLAY", "DESCRIPTION:Turno en Juma en 2 horas", "END:VALARM", "END:VEVENT", "END:VCALENDAR"].join("\r\n");
+    return `<div class="cal-add"><span class="policy">Agregar a mi calendario (opcional):</span>
+      <div class="cal-add-btns"><a class="btn btn-line btn-sm" href="${g}" target="_blank" rel="noopener">Google Calendar</a>
+      <a class="btn btn-line btn-sm" href="data:text/calendar;charset=utf-8,${encodeURIComponent(ics)}" download="turno-juma.ics">iPhone / otro</a></div></div>`;
+  }
+  function doneHTML(t) {   // t = { nombre, tratamiento, fecha, hora, dur, codigo, pagada, nota }
     return `
       <div class="done">
         ${CHECK}
@@ -152,9 +167,9 @@
           ${t.codigo ? `<div class="sum-row"><span>Código</span><span><strong>${t.codigo}</strong></span></div>` : ""}
         </div>
         ${t.nota ? `<p class="policy">${t.nota}</p>` : ""}
-        <p class="policy">${API ? "Tu turno ya quedó agendado. Si necesitás cambiarlo o cancelarlo, escribinos por WhatsApp con tu código." : "Esta es una demostración: el turno no se agenda. Podés avisarle a Carla con el botón."}</p>
-        <a class="btn btn-solid" href="https://wa.me/${WA}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">${API ? "Guardar el turno en WhatsApp" : "Avisar por WhatsApp"}</a>
-        <a class="btn btn-line" href="reservar.html">Reservar otro turno</a>
+        <p class="policy">${API ? "Tu turno ya quedó agendado. El día anterior te escribimos por WhatsApp para recordártelo. Si necesitás cambiarlo, escribinos al 11 3903-7489." : "Esta es una demostración: el turno no se agenda."}</p>
+        ${calLinks(t)}
+        <a class="btn btn-solid" href="index.html">Volver al inicio</a>
       </div>`;
   }
 
@@ -172,7 +187,7 @@
       try { j = await (await fetch(API + "?accion=estado&codigo=" + codigo)).json(); } catch (e) { j = { ok: false }; }
       if (j.ok && j.estado === "confirmado") {
         const tr = TREATS.find((x) => x.id === j.turno.servicio) || {};
-        box.innerHTML = doneHTML({ nombre: j.turno.nombre, tratamiento: tr.name || j.turno.tratamiento, fecha: j.turno.fecha, hora: j.turno.hora, codigo, pagada: true, nota: tr.note });
+        box.innerHTML = doneHTML({ nombre: j.turno.nombre, tratamiento: tr.name || j.turno.tratamiento, fecha: j.turno.fecha, hora: j.turno.hora, dur: tr.dur, codigo, pagada: true, nota: tr.note });
         try { sessionStorage.removeItem("juma_pago_" + codigo); } catch (e) {}
         toast("¡Turno confirmado!"); return;
       }
@@ -303,7 +318,7 @@
       if (!API) {
         booked.add(bk.slot.key); store.set("juma_demo_booked", [...booked]);
         bk.done = true;
-        $("#bkSide").innerHTML = doneHTML({ nombre: name, tratamiento: bk.treat.name, fecha: iso(bk.day), hora: bk.slot.label, nota: bk.treat.note });
+        $("#bkSide").innerHTML = doneHTML({ nombre: name, tratamiento: bk.treat.name, fecha: iso(bk.day), hora: bk.slot.label, dur: bk.treat.dur, nota: bk.treat.note });
         renderCal(); renderSlots(); lockForm(); toast("Turno reservado (demo)"); return;
       }
       const btn = $("#bkConfirm");
@@ -319,7 +334,7 @@
         if (j.ok && j.estado === "pendiente" && j.pago) { showPay(j, name); return; }
         if (j.ok) {
           bk.done = true;
-          $("#bkSide").innerHTML = doneHTML({ nombre: name, tratamiento: bk.treat.name, fecha: iso(bk.day), hora: bk.slot.label, codigo: j.codigo, nota: bk.treat.note });
+          $("#bkSide").innerHTML = doneHTML({ nombre: name, tratamiento: bk.treat.name, fecha: iso(bk.day), hora: bk.slot.label, dur: bk.treat.dur, codigo: j.codigo, nota: bk.treat.note });
           lockForm(); toast("¡Turno reservado!"); return;
         }
         err.textContent = j.error || "No pudimos reservar. Probá de nuevo.";

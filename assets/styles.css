@@ -570,3 +570,6 @@ body.menu-open { overflow: hidden; }
 .done .btn { width: 100%; }
 .bk-main.locked { opacity: .4; pointer-events: none; transition: opacity .3s; }
 .bk-side { scroll-margin-top: 96px; }
+.cal-add { width: 100%; display: grid; gap: 8px; padding-top: 4px; }
+.cal-add-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.done .cal-add-btns .btn { width: auto; flex: 1; }
