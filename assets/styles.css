@@ -588,3 +588,49 @@ body.menu-open { overflow: hidden; }
 @media (max-width: 860px) { .about { grid-template-columns: 1fr; } .about-photo { max-width: 420px; } }
 .faq p a { color: var(--sage-deep); }
 .price-tbd { font-family: var(--body); font-size: 14px; font-weight: 300; color: var(--ink-soft); }
+
+/* =====================================================================
+   GIFT CARD VIRTUAL (tarjeta para regalar)
+   ===================================================================== */
+.jcard { --jc-a: #a7b690; --jc-b: #8a9b73; position: relative; width: 100%; max-width: 560px; aspect-ratio: 1.586; border-radius: 22px; overflow: hidden;
+  background: radial-gradient(120% 140% at 0% 0%, var(--jc-a) 0%, var(--jc-b) 70%, #7c8d66 100%); color: #fff;
+  box-shadow: 0 30px 60px -30px rgba(37,43,33,.55), 0 2px 0 rgba(255,255,255,.25) inset; font-family: var(--body); isolation: isolate; container-type: inline-size; }
+.jcard::before { content: ""; position: absolute; inset: 3.2cqw; border: 1px solid rgba(255,255,255,.45); border-radius: 14px; pointer-events: none; z-index: 2; }
+.jcard .jc-leaf { position: absolute; right: -8%; bottom: -14%; width: 62%; opacity: .22; z-index: 0; }
+.jcard .jc-in { position: absolute; inset: 7cqw 7.5cqw; display: grid; grid-template-rows: auto 1fr auto; z-index: 3; }
+.jc-top { display: flex; justify-content: space-between; align-items: flex-start; }
+.jc-word { font-family: var(--display); font-weight: 200; font-size: 9.5cqw; letter-spacing: .14em; line-height: 1; }
+.jc-word .u::after { bottom: -.14em; height: 1px; }
+.jc-sub { font-family: var(--serif); font-size: 1.75cqw; letter-spacing: .32em; margin-top: 2.6cqw; opacity: .92; }
+.jc-tag { font-family: var(--serif); font-size: 2.3cqw; letter-spacing: .34em; text-transform: uppercase; border: 1px solid rgba(255,255,255,.6); border-radius: 99px; padding: 1.1cqw 2.4cqw; white-space: nowrap; }
+.jc-mid { align-self: center; }
+.jc-para { font-family: var(--serif); font-size: 4.6cqw; line-height: 1.15; }
+.jc-msg { font-size: 2.6cqw; opacity: .92; margin-top: 1.4cqw; max-width: 46ch; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.jc-bot { display: flex; justify-content: space-between; align-items: flex-end; gap: 3cqw; }
+.jc-amount { font-family: var(--display); font-weight: 200; font-size: 9cqw; line-height: .95; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+.jc-amount small { display: block; font-family: var(--serif); font-size: 1.9cqw; letter-spacing: .28em; text-transform: uppercase; margin-bottom: 1.2cqw; opacity: .9; }
+.jc-code { text-align: right; }
+.jc-code b { display: inline-block; font-family: "Courier New", monospace; font-weight: 600; font-size: 3.2cqw; letter-spacing: .12em; background: rgba(255,255,255,.92); color: #3f4b35; border-radius: 8px; padding: 1cqw 2cqw; }
+.jc-code small { display: block; font-size: 1.9cqw; margin-top: 1.4cqw; opacity: .92; letter-spacing: .04em; }
+.jcard.is-off { filter: grayscale(.8); opacity: .75; }
+
+/* página regalo.html */
+.gift-view { display: grid; grid-template-columns: 1.1fr .9fr; gap: clamp(36px, 6vw, 80px); align-items: center; }
+.gift-view .jcard { animation: cardin .9s cubic-bezier(.2,.7,.2,1) both; transform: rotate(-2deg); }
+@keyframes cardin { from { transform: translateY(24px) rotate(-6deg); } to { transform: rotate(-2deg); } }
+.gift-note { font-family: var(--serif); font-size: clamp(20px, 2.2vw, 24px); line-height: 1.45; color: var(--ink); border-left: 2px solid var(--sage); padding-left: 20px; margin-top: 22px; }
+.gift-from { color: var(--ink-soft); margin-top: 12px; }
+.gift-steps { list-style: none; counter-reset: s; padding: 0; margin: 28px 0 0; display: grid; gap: 14px; }
+.gift-steps li { counter-increment: s; display: grid; grid-template-columns: 34px 1fr; gap: 12px; color: var(--ink-soft); }
+.gift-steps li::before { content: counter(s, decimal-leading-zero); font-family: var(--serif); color: var(--sage-deep); letter-spacing: .1em; padding-top: 2px; }
+.gift-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; }
+@media (max-width: 860px) { .gift-view { grid-template-columns: 1fr; } .gift-view .jcard { transform: none; animation: none; } }
+
+/* canje en la reserva */
+.gc-box { display: grid; gap: 10px; margin-top: 6px; }
+.gc-toggle { display: flex; align-items: center; gap: 10px; font-size: 15px; cursor: pointer; }
+.gc-toggle input { width: 18px; height: 18px; accent-color: var(--sage-deep); }
+.gc-row { display: flex; gap: 8px; }
+.gc-row input { flex: 1; text-transform: uppercase; letter-spacing: .08em; }
+.gc-ok { font-size: 14px; color: var(--sage-deep); }
+.gc-err { font-size: 14px; color: var(--warn); }

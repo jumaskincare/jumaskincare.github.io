@@ -175,6 +175,7 @@
           <div class="sum-row"><span>Cuándo</span><span>${fmtIso(t.fecha)} a las ${t.hora} h</span></div>
           <div class="sum-row"><span>Dónde</span><span>Fragata Argentina 2063, of. 3</span></div>
           ${t.pagada ? `<div class="sum-row"><span>Seña</span><span>Pagada ✓</span></div>` : ""}
+          ${t.giftcard ? `<div class="sum-row"><span>Gift card</span><span>${t.giftcard} ✓</span></div>` : ""}
           ${t.codigo ? `<div class="sum-row"><span>Código</span><span><strong>${t.codigo}</strong></span></div>` : ""}
         </div>
         ${t.nota ? `<p class="policy">${t.nota}</p>` : ""}
@@ -235,6 +236,34 @@
       renderBooking();
     }
     $("#bkTreat").addEventListener("change", (e) => { bk.treat = TREATS.find((t) => t.id === e.target.value); bk.slot = null; refresh(); });
+
+    /* gift card: valida el código antes de confirmar; con gift card válida no se paga seña */
+    bk.gift = null;
+    const gcMsg = (t, ok) => { const m = $("#gcMsg"); m.textContent = t; m.className = ok ? "gc-ok" : "gc-err"; };
+    $("#gcHave").addEventListener("change", (e) => {
+      $("#gcFields").hidden = !e.target.checked;
+      if (!e.target.checked) { bk.gift = null; gcMsg("", true); renderSummary(); } else $("#gcCode").focus();
+    });
+    async function checkGift() {
+      const code = $("#gcCode").value.trim();
+      bk.gift = null; renderSummary();
+      if (!code) { gcMsg("Escribí el código de tu gift card.", false); return; }
+      if (!API) { gcMsg("En la versión de demostración no se validan gift cards.", false); return; }
+      gcMsg("Validando…", true);
+      try {
+        const g = await (await fetch(API + "?accion=giftcard&codigo=" + encodeURIComponent(code))).json();
+        if (g.ok && g.valida) {
+          bk.gift = g; $("#gcCode").value = g.codigo;
+          gcMsg(`✓ Gift card válida${g.para ? " de " + g.para : ""} · saldo ${money(g.saldo)} · vence ${g.vence}. No pagás seña.`, true);
+        } else gcMsg(g.motivo || "No encontramos esa gift card. Revisá el código.", false);
+      } catch (e) { gcMsg("No pudimos validarla. Probá de nuevo.", false); }
+      renderSummary();
+    }
+    $("#gcCheck").addEventListener("click", checkGift);
+    $("#gcCode").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); checkGift(); } });
+    $("#gcCode").addEventListener("input", () => { if (bk.gift) { bk.gift = null; gcMsg("", true); renderSummary(); } });
+    const preGift = new URLSearchParams(location.search).get("gc");
+    if (preGift) { $("#gcHave").checked = true; $("#gcFields").hidden = false; $("#gcCode").value = preGift; checkGift(); }
     $("#calPrev").addEventListener("click", () => { bk.month = new Date(bk.month.getFullYear(), bk.month.getMonth() - 1, 1); renderCal(); });
     $("#calNext").addEventListener("click", () => { bk.month = new Date(bk.month.getFullYear(), bk.month.getMonth() + 1, 1); renderCal(); });
     function renderCal() {
@@ -281,11 +310,12 @@
       $("#sumDur").textContent = bk.treat.dur + " min";
       $("#sumPrice").textContent = money(bk.treat.price);
       $("#sumNote").textContent = bk.treat.note || "";
-      const sena = senaInfo && senaInfo.activa;
-      $("#sumSenaRow").hidden = !sena;
-      if (sena) { $("#sumSena").textContent = money(senaInfo.monto); $("#sumPolicy").textContent = senaInfo.politica; }
+      const sena = senaInfo && senaInfo.activa && !bk.gift;
+      $("#sumSenaRow").hidden = !(sena || bk.gift);
+      if (bk.gift) { $("#sumSenaRow").firstElementChild.textContent = "Gift card"; $("#sumSena").textContent = bk.gift.codigo + " · saldo " + money(bk.gift.saldo); $("#sumPolicy").textContent = "El valor del tratamiento se descuenta de tu gift card el día del turno. Si no podés asistir, avisanos con más de 24 h."; }
+      else if (sena) { $("#sumSenaRow").firstElementChild.textContent = "Seña para confirmar"; $("#sumSena").textContent = money(senaInfo.monto); $("#sumPolicy").textContent = senaInfo.politica; }
       const btn = $("#bkConfirm");
-      if (!bk.sending) btn.textContent = sena ? "Continuar al pago de la seña" : "Confirmar turno";
+      if (!bk.sending) btn.textContent = bk.gift ? "Confirmar turno con gift card" : sena ? "Continuar al pago de la seña" : "Confirmar turno";
       btn.disabled = !(bk.day && bk.slot) || bk.sending;
     }
     function renderBooking() { renderCal(); renderSlots(); renderSummary(); }
@@ -339,15 +369,16 @@
           method: "POST",
           headers: { "Content-Type": "text/plain;charset=utf-8" },   // texto plano: evita el pedido previo de permisos (CORS)
           body: JSON.stringify({ servicio: bk.treat.id, fecha: iso(bk.day), hora: bk.slot.label, nombre: name, telefono: phone,
-                                 comentario: $("#bkNote").value.trim(), web: $("#bkWeb") ? $("#bkWeb").value : "" })
+                                 comentario: $("#bkNote").value.trim(), web: $("#bkWeb") ? $("#bkWeb").value : "", giftcard: bk.gift ? bk.gift.codigo : "" })
         });
         const j = await r.json();
         if (j.ok && j.estado === "pendiente" && j.pago) { showPay(j, name); return; }
         if (j.ok) {
           bk.done = true;
-          $("#bkSide").innerHTML = doneHTML({ nombre: name, tratamiento: bk.treat.name, fecha: iso(bk.day), hora: bk.slot.label, dur: bk.treat.dur, codigo: j.codigo, nota: bk.treat.note });
+          $("#bkSide").innerHTML = doneHTML({ nombre: name, tratamiento: bk.treat.name, fecha: iso(bk.day), hora: bk.slot.label, dur: bk.treat.dur, codigo: j.codigo, nota: bk.treat.note, giftcard: j.giftcard });
           lockForm(); toast("¡Turno reservado!"); return;
         }
+        if (j.gift) { bk.gift = null; gcMsg(j.error, false); }
         err.textContent = j.error || "No pudimos reservar. Probá de nuevo.";
         if (j.ocupado) { bk.slot = null; await refresh(true); }
       } catch (e) {
@@ -369,11 +400,14 @@
       .then((r) => r.json()).then((j) => show(!!j.ok, j.mensaje || "Error")).catch(() => show(false, "Sin conexión. Probá de nuevo."));
   }
 
-  /* ---------------- página Gift card: pedido por WhatsApp ---------------- */
+  /* ---------------- página Gift card: armado en vivo + pedido por WhatsApp ---------------- */
   if ($("#gcForm")) {
     let gcAmount = GIFT_AMOUNTS[0];
     const updateLink = () => {
       const to = $("#gcName").value.trim(), note = $("#gcMsg").value.trim(), from = $("#gcFrom").value.trim();
+      $("#jcPara").textContent = to ? "Para " + to : "Para alguien especial";
+      $("#jcMsg").textContent = note;
+      $("#jcAmount").textContent = money(gcAmount);
       const msg = `Hola Carla! Quiero regalar una gift card de ${money(gcAmount)}` + (to ? ` para ${to}` : "") + "." +
         (note ? `\nMensaje para la tarjeta: "${note}"` : "") + (from ? `\nSoy ${from}.` : "");
       $("#gcSend").href = `https://wa.me/${WA}?text=${encodeURIComponent(msg)}`;
@@ -383,12 +417,57 @@
       const b = e.target.closest("[data-gc]"); if (!b) return;
       gcAmount = Number(b.dataset.gc);
       document.querySelectorAll("[data-gc]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
-      $("#gcAmount").textContent = money(gcAmount); updateLink();
+      updateLink();
     });
-    $("#gcName").addEventListener("input", (e) => { $("#gcTo").textContent = e.target.value.trim() ? "Para " + e.target.value.trim() : "Gift card"; });
     $("#gcForm").addEventListener("input", updateLink);
     $("#gcForm").addEventListener("submit", (e) => e.preventDefault());
     updateLink();
+  }
+
+  /* ---------------- regalo.html: la gift card virtual ---------------- */
+  if ($("#regalo")) {
+    const code = (new URLSearchParams(location.search).get("c") || "").toUpperCase();
+    const info = $("#regaloInfo"), card = $("#jcard");
+    const esc = (t) => String(t || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    const fail = (t) => { card.classList.add("is-off"); info.innerHTML = `<div class="eyebrow">Gift card</div><h1 class="page-title" style="font-size:clamp(34px,4.4vw,56px)">${t}</h1>
+      <div class="gift-actions"><a class="btn btn-solid" href="https://wa.me/${WA}" target="_blank" rel="noopener">Escribinos por WhatsApp</a></div>`; };
+    if (!API || !code) fail("No encontramos esta gift card");
+    else fetch(API + "?accion=giftcard&codigo=" + encodeURIComponent(code)).then((r) => r.json()).then((g) => {
+      if (!g.ok || !g.codigo) { fail(g.motivo || "No encontramos esta gift card"); return; }
+      $("#jcPara").textContent = g.para ? "Para " + g.para : "Un regalo para vos";
+      $("#jcMsg").textContent = g.mensaje || "";
+      $("#jcAmount").textContent = money(g.monto);
+      $("#jcCode").textContent = g.codigo;
+      $("#jcVence").textContent = g.vence ? "Válida hasta " + g.vence : "";
+      if (!g.valida) { fail(g.motivo); return; }
+      const nombre = g.para ? esc(g.para.split(" ")[0]) + ", te" : "Te";
+      info.innerHTML = `
+        <div class="eyebrow">Un regalo para vos</div>
+        <h1 class="page-title" style="font-size:clamp(38px,5vw,64px)">${nombre} regalaron un momento <em>para tu piel</em></h1>
+        ${g.mensaje ? `<p class="gift-note">“${esc(g.mensaje)}”</p>` : ""}
+        ${g.de ? `<p class="gift-from">Con cariño, ${esc(g.de)}</p>` : ""}
+        ${g.saldo < g.monto ? `<p class="gift-from">Saldo disponible: <strong>${money(g.saldo)}</strong></p>` : ""}
+        <ol class="gift-steps">
+          <li><span>Tocá <strong>Reservar mi turno</strong> y elegí el tratamiento, el día y el horario.</span></li>
+          <li><span>Tu código <strong>${esc(g.codigo)}</strong> ya queda cargado: no pagás seña.</span></li>
+          <li><span>El día del turno se descuenta del valor de la gift card. Válida hasta el ${esc(g.vence)}.</span></li>
+        </ol>
+        <div class="gift-actions">
+          <a class="btn btn-solid" href="reservar.html?gc=${encodeURIComponent(g.codigo)}&t=limpieza_primera">Reservar mi turno</a>
+          <button class="btn btn-line" type="button" id="rgSave">Guardar como imagen</button>
+        </div>`;
+      $("#rgSave").addEventListener("click", async (e) => {
+        const btn = e.currentTarget; btn.disabled = true; btn.textContent = "Generando…";
+        try {
+          if (!window.html2canvas) await new Promise((ok, ko) => { const sc = document.createElement("script"); sc.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"; sc.onload = ok; sc.onerror = ko; document.head.appendChild(sc); });
+          const prev = card.style.transform; card.style.transform = "none"; card.style.animation = "none";
+          const cv = await window.html2canvas(card, { scale: 3, backgroundColor: null, useCORS: true });
+          card.style.transform = prev;
+          const a = document.createElement("a"); a.href = cv.toDataURL("image/png"); a.download = "gift-card-juma-" + g.codigo + ".png"; document.body.appendChild(a); a.click(); a.remove();
+        } catch (err) { toast("No se pudo generar la imagen. Probá con una captura de pantalla."); }
+        btn.disabled = false; btn.textContent = "Guardar como imagen";
+      });
+    }).catch(() => fail("Sin conexión. Probá de nuevo en un momento"));
   }
 
   /* ---------------- varios ---------------- */

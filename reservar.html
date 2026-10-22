@@ -91,6 +91,13 @@
                 <label>WhatsApp<input type="tel" id="bkPhone" autocomplete="tel" placeholder="Ej.: 11 2345 6789"></label>
                 <label class="full">Comentario (opcional)<textarea id="bkNote" placeholder="Algo que Carla deba saber antes de tu sesión"></textarea></label>
               </div>
+              <div class="gc-box">
+                <label class="gc-toggle"><input type="checkbox" id="gcHave"> Tengo una gift card</label>
+                <div id="gcFields" hidden>
+                  <div class="gc-row"><input type="text" id="gcCode" placeholder="Código, ej.: JUMA-7KQ2" autocomplete="off" maxlength="12" aria-label="Código de la gift card"><button class="btn btn-line btn-sm" type="button" id="gcCheck">Validar</button></div>
+                  <p class="gc-ok" id="gcMsg" role="status"></p>
+                </div>
+              </div>
               <div class="sr" aria-hidden="true"><label>No completar<input type="text" id="bkWeb" tabindex="-1" autocomplete="off"></label></div>
               <p class="err" id="bkErr" role="alert"></p>
             </form>
