@@ -24,24 +24,31 @@
     spark: '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/>'
   };
   const TREATS = [
-    { id: "limpieza_primera", name: "Limpieza facial · primera vez", dur: 60, price: 30000, cat: "facial", icon: "leaf",
-      desc: "Diagnóstico de tu piel y limpieza profunda. Es el punto de partida para armar tu plan." },
-    { id: "limpieza_mantenimiento", name: "Limpieza facial · mantenimiento", dur: 60, price: 30000, cat: "facial", icon: "drop",
-      desc: "Limpieza profunda para sostener los resultados entre tratamientos." },
-    { id: "peeling", name: "Peeling", dur: 45, price: 40000, cat: "facial", icon: "layers",
-      desc: "Renueva la capa superficial de la piel para mejorar textura y luminosidad.", note: "No depilarse 2 días antes." },
-    { id: "dermapen", name: "Dermapen", dur: 45, price: 40000, cat: "facial", icon: "dots",
-      desc: "Microagujas que estimulan el colágeno natural. Ayuda con textura, poros y marcas." },
-    { id: "radiofrecuencia", name: "Radiofrecuencia", dur: 45, price: 40000, cat: "facial", icon: "wave",
-      desc: "Calor controlado que estimula el colágeno y mejora la firmeza de la piel." },
-    { id: "crioradiofrecuencia", name: "Crioradiofrecuencia", dur: 45, price: 40000, cat: "facial", icon: "snow",
-      desc: "Combina frío y radiofrecuencia para tonificar y reafirmar." },
-    { id: "trio_bell", name: "Trio Bell corporal", dur: 40, price: 30000, cat: "corporal", icon: "body",
-      desc: "Tratamiento corporal en 2 zonas a elección.", note: "Pack de 6 sesiones: la sexta es gratis." },
-    { id: "pdrn_salmon", name: "PDRN salmón", dur: 45, price: 50000, cat: "facial", icon: "spiral",
-      desc: "Bioestimulación para regenerar e hidratar la piel en profundidad." },
-    { id: "plasma", name: "Plasma", dur: 45, price: null, cat: "facial", icon: "spark", consult: true,
-      desc: "Lo indicamos según tu piel. Consultanos y Carla te asesora." }
+    /* ---- faciales ---- */
+    { id: "limpieza_primera", name: "Higiene facial profunda · primera vez", dur: 60, price: 30000, cat: "facial", icon: "leaf",
+      desc: "El punto de partida indispensable. Incluye el diagnóstico de tu piel, limpieza detallada, extracción e hidratación para descongestionarla y prepararla." },
+    { id: "limpieza_mantenimiento", name: "Higiene facial profunda · mantenimiento", dur: 60, price: 30000, cat: "facial", icon: "drop",
+      desc: "Limpieza detallada, extracción e hidratación para sostener la piel en orden entre tratamientos." },
+    { id: "dermapen", name: "Microneedling (Dermapen)", dur: 45, price: 40000, cat: "facial", icon: "dots",
+      desc: "Estimulación de colágeno e inducción de activos para mejorar textura, firmeza, marcas y luminosidad.", note: "Requiere una higiene facial previa." },
+    { id: "radiofrecuencia", name: "Radiofrecuencia facial", dur: 45, price: 40000, cat: "facial", icon: "wave",
+      desc: "Reafirmación tensora, estimulación de colágeno y definición del óvalo facial mediante calor controlado." },
+    { id: "crioradiofrecuencia", name: "Crioradiofrecuencia facial", dur: 45, price: 40000, cat: "facial", icon: "snow",
+      desc: "Combina frío y radiofrecuencia para tensar, reafirmar y definir el óvalo facial." },
+    { id: "electroporacion", name: "Electroporación (mesoterapia virtual)", dur: 45, price: null, cat: "facial", icon: "spiral", consult: true,
+      desc: "Permeación profunda de principios activos (ácido hialurónico, vitaminas y boosters) sin agujas." },
+    { id: "peeling", name: "Peelings progresivos", dur: 45, price: 40000, cat: "facial", icon: "layers",
+      desc: "Renovación celular guiada para atenuar manchas, líneas finas y unificar el tono de la piel.", note: "Requiere una higiene facial previa. No depilarse 2 días antes." },
+    /* ---- modelado y corporales ---- */
+    { id: "modelado", name: "Modelado y tonificación integral", dur: 60, price: null, cat: "corporal", icon: "body", consult: true,
+      desc: "Protocolos diseñados para mejorar la firmeza, la elasticidad y la textura de la piel." },
+    { id: "trio_bell", name: "Trío Bell y radiofrecuencia corporal", dur: 40, price: 30000, cat: "corporal", icon: "wave",
+      desc: "Aparatología combinada enfocada en la reducción localizada, la flacidez y el drenaje. 2 zonas a elección.", note: "Pack de 6 sesiones: la sexta es gratis." },
+    { id: "electroporacion_corporal", name: "Electroporación corporal", dur: 45, price: null, cat: "corporal", icon: "spiral", consult: true,
+      desc: "Asimilación intensiva de activos reafirmantes y anticelulíticos en capas profundas." },
+    /* ---- asesoramiento ---- */
+    { id: "rutina", name: "Diagnóstico y orden de rutina", dur: 45, price: null, cat: "rutina", icon: "spark", consult: true,
+      desc: "Revisamos lo que usás en casa, simplificamos tu paso a paso y armamos un plan efectivo adaptado a tu estilo de vida." }
   ];
   const HOURS = { 1: [["09:00", "16:30"], ["18:00", "20:00"]], 2: [["09:00", "16:30"], ["18:00", "20:00"]], 3: [["09:00", "16:30"], ["18:00", "20:00"]],
                   4: [["09:00", "16:30"], ["18:00", "20:00"]], 5: [["09:00", "16:30"], ["18:00", "20:00"]], 6: [["08:00", "15:00"]], 0: [] };
@@ -113,16 +120,16 @@
         <article class="treat">
           <div style="display:flex;justify-content:space-between;align-items:start;gap:12px">
             <div class="treat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">${ICON[t.icon]}</svg></div>
-            <span class="tag">${t.cat === "corporal" ? "Corporal" : "Facial"}</span>
+            <span class="tag">${{ facial: "Facial", corporal: "Corporal", rutina: "Asesoramiento" }[t.cat]}</span>
           </div>
           <h3>${t.name}</h3>
-          <div class="treat-meta"><span>${t.dur} min</span><span>·</span><span>por sesión</span></div>
+          <div class="treat-meta">${t.consult ? "<span>Se define en el diagnóstico</span>" : `<span>${t.dur} min</span><span>·</span><span>por sesión</span>`}</div>
           <p>${t.desc}</p>
           ${t.note ? `<div class="treat-note">${t.note}</div>` : ""}
           <div class="treat-foot">
-            <span class="price">${t.consult ? "Consultar" : money(t.price)}</span>
+            <span class="price">${t.consult ? "<small class=\"price-tbd\">Valor según diagnóstico</small>" : money(t.price)}</span>
             ${t.consult
-              ? `<a class="btn btn-line btn-sm" href="https://wa.me/${WA}?text=${encodeURIComponent("Hola Carla, quería consultar por el tratamiento de " + t.name + ".")}" target="_blank" rel="noopener">Consultar</a>`
+              ? `<a class="btn btn-line btn-sm" href="https://wa.me/${WA}?text=${encodeURIComponent("Hola Carla! Quería consultar por " + t.name + ".")}" target="_blank" rel="noopener">Consultar</a>`
               : `<a class="btn btn-solid btn-sm" href="reservar.html?t=${t.id}">Reservar</a>`}
           </div>
         </article>`).join("");
