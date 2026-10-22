@@ -49,7 +49,10 @@
   const STEP_MIN = 60, MAX_DAYS = 30, MIN_AHEAD_H = 1;
   const GIFT_AMOUNTS = [30000, 50000, 80000];
 
-  /* ---------------- fechas y disponibilidad (simulada) ---------------- */
+  /* ---------------- disponibilidad ----------------
+     Con API vacía, la página funciona en modo demostración (horarios simulados).
+     Con la dirección del Apps Script, muestra los horarios libres reales del Google Calendar. */
+  const API = window.JUMA_API || "";
   const pad = (n) => String(n).padStart(2, "0");
   const iso = (d) => d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
   const DOW = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
@@ -57,32 +60,45 @@
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const lastDay = new Date(today); lastDay.setDate(lastDay.getDate() + MAX_DAYS - 1);
   const booked = new Set(store.get("juma_demo_booked", []));
+  const real = {};   // servicio → { "2026-10-22": ["09:00", ...] }
   function hash(s) { let h = 2166136261; for (const c of s) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
-  function slotsFor(day, dur) {
+  function demoSlots(day, dur) {
     if (day < today || day > lastDay || HOLIDAYS.includes(iso(day))) return [];
     const out = [], min = new Date(Date.now() + MIN_AHEAD_H * 3600e3);
     for (const [a, b] of HOURS[day.getDay()] || []) {
       const [ah, am] = a.split(":").map(Number), [bh, bm] = b.split(":").map(Number);
       const end = new Date(day); end.setHours(bh, bm, 0, 0);
       for (let t = new Date(day.getFullYear(), day.getMonth(), day.getDate(), ah, am); +t + dur * 60e3 <= +end; t = new Date(+t + STEP_MIN * 60e3)) {
-        const key = iso(day) + " " + pad(t.getHours()) + ":" + pad(t.getMinutes());
-        const taken = (hash(key) % 100) < 32 || booked.has(key);   // demo: ~1 de cada 3 horarios ocupado
-        out.push({ time: new Date(t), key, free: t >= min && !taken, past: t < min });
+        if (t < min) continue;
+        const label = pad(t.getHours()) + ":" + pad(t.getMinutes()), key = iso(day) + " " + label;
+        out.push({ key, label, free: !((hash(key) % 100) < 32 || booked.has(key)) });   // demo: ~1 de cada 3 ocupado
       }
     }
-    return out.filter((s) => !s.past);
+    return out;
   }
-  const freeCount = (day, dur) => slotsFor(day, dur).filter((s) => s.free).length;
+  function slotsFor(day, treat) {
+    if (!API) return demoSlots(day, treat.dur);
+    return ((real[treat.id] || {})[iso(day)] || []).map((h) => ({ key: iso(day) + " " + h, label: h, free: true }));
+  }
+  const freeCount = (day, treat) => slotsFor(day, treat).filter((s) => s.free).length;
+  async function loadAvail(treat, force) {
+    if (!API || (real[treat.id] && !force)) return;
+    const r = await fetch(API + "?accion=disponibilidad&servicio=" + encodeURIComponent(treat.id));
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || "Error");
+    real[treat.id] = j.dias;
+  }
   const bookable = TREATS.filter((t) => !t.consult);
 
   /* próximo turno libre (portada) */
-  function updateNextSlot() {
+  async function updateNextSlot() {
     const el = $("#nextSlotText"); if (!el) return;
     const t = bookable[0];
+    try { await loadAvail(t); } catch (e) { el.textContent = "Ver horarios"; return; }
     for (let i = 0; i < MAX_DAYS; i++) {
       const d = new Date(today); d.setDate(d.getDate() + i);
-      const s = slotsFor(d, t.dur).find((x) => x.free);
-      if (s) { el.textContent = (i === 0 ? "Hoy" : i === 1 ? "Mañana" : fmtDay(d).replace(/^./, (c) => c.toUpperCase())) + " · " + pad(s.time.getHours()) + ":" + pad(s.time.getMinutes()) + " h"; return; }
+      const s = slotsFor(d, t).find((x) => x.free);
+      if (s) { el.textContent = (i === 0 ? "Hoy" : i === 1 ? "Mañana" : fmtDay(d).replace(/^./, (c) => c.toUpperCase())) + " · " + s.label + " h"; return; }
     }
     el.textContent = "Consultanos por WhatsApp";
   }
@@ -119,10 +135,19 @@
   /* ---------------- página Reservar ---------------- */
   if ($("#bkMain")) {
     const pre = new URLSearchParams(location.search).get("t");
-    const bk = { treat: bookable.find((t) => t.id === pre) || bookable[0], month: new Date(today.getFullYear(), today.getMonth(), 1), day: null, slot: null, done: false };
+    const bk = { treat: bookable.find((t) => t.id === pre) || bookable[0], month: new Date(today.getFullYear(), today.getMonth(), 1), day: null, slot: null, done: false, loading: false, error: "" };
     $("#bkTreat").innerHTML = bookable.map((t) => `<option value="${t.id}">${t.name} · ${t.dur} min · ${money(t.price)}</option>`).join("");
     $("#bkTreat").value = bk.treat.id;
-    $("#bkTreat").addEventListener("change", (e) => { bk.treat = TREATS.find((t) => t.id === e.target.value); bk.slot = null; if (bk.day && !freeCount(bk.day, bk.treat.dur)) bk.day = null; renderBooking(); });
+    async function refresh(force) {
+      bk.loading = true; bk.error = ""; renderBooking();
+      try { await loadAvail(bk.treat, force); }
+      catch (e) { bk.error = "No pudimos cargar los horarios. Probá de nuevo en un momento o escribinos por WhatsApp."; }
+      bk.loading = false;
+      if (bk.day && !freeCount(bk.day, bk.treat)) bk.day = null;
+      if (bk.slot && !(bk.day && slotsFor(bk.day, bk.treat).some((s) => s.key === bk.slot.key && s.free))) bk.slot = null;
+      renderBooking();
+    }
+    $("#bkTreat").addEventListener("change", (e) => { bk.treat = TREATS.find((t) => t.id === e.target.value); bk.slot = null; refresh(); });
     $("#calPrev").addEventListener("click", () => { bk.month = new Date(bk.month.getFullYear(), bk.month.getMonth() - 1, 1); renderCal(); });
     $("#calNext").addEventListener("click", () => { bk.month = new Date(bk.month.getFullYear(), bk.month.getMonth() + 1, 1); renderCal(); });
     function renderCal() {
@@ -136,12 +161,13 @@
       const days = new Date(m.getFullYear(), m.getMonth() + 1, 0).getDate();
       for (let d = 1; d <= days; d++) {
         const day = new Date(m.getFullYear(), m.getMonth(), d);
-        const n = freeCount(day, bk.treat.dur);
+        const n = bk.loading ? 0 : freeCount(day, bk.treat);
         const sel = bk.day && iso(bk.day) === iso(day);
         const label = fmtDay(day) + (n ? `, ${n} horarios libres` : ", sin horarios");
         html += `<button class="day${n ? " avail" : ""}${sel ? " sel" : ""}${iso(day) === iso(today) ? " today" : ""}" data-day="${iso(day)}" ${n ? "" : "disabled"} aria-label="${label}">${d}</button>`;
       }
       $("#cal").innerHTML = html;
+      $("#cal").classList.toggle("is-loading", bk.loading);
     }
     $("#cal").addEventListener("click", (e) => {
       const b = e.target.closest("[data-day]"); if (!b || b.disabled) return;
@@ -149,36 +175,33 @@
     });
     function renderSlots() {
       const box = $("#slots"), hint = $("#slotsHint");
+      if (bk.error) { box.innerHTML = ""; hint.textContent = bk.error; return; }
+      if (bk.loading) { box.innerHTML = ""; hint.textContent = "Buscando horarios libres…"; return; }
       if (!bk.day) { box.innerHTML = ""; hint.textContent = "Elegí un día para ver los horarios libres."; return; }
-      const list = slotsFor(bk.day, bk.treat.dur);
-      box.innerHTML = list.map((s) => `<button class="slot" data-key="${s.key}" ${s.free ? "" : "disabled"} aria-pressed="${!!(bk.slot && bk.slot.key === s.key)}" aria-label="${pad(s.time.getHours())}:${pad(s.time.getMinutes())}${s.free ? "" : " ocupado"}">${pad(s.time.getHours())}:${pad(s.time.getMinutes())}</button>`).join("");
-      hint.textContent = "Los horarios tachados ya están ocupados.";
+      const list = slotsFor(bk.day, bk.treat);
+      box.innerHTML = list.map((s) => `<button class="slot" data-key="${s.key}" ${s.free ? "" : "disabled"} aria-pressed="${!!(bk.slot && bk.slot.key === s.key)}" aria-label="${s.label}${s.free ? "" : " ocupado"}">${s.label}</button>`).join("");
+      hint.textContent = API ? "Solo te mostramos los horarios libres." : "Los horarios tachados ya están ocupados.";
     }
     $("#slots").addEventListener("click", (e) => {
       const b = e.target.closest("[data-key]"); if (!b || b.disabled) return;
-      bk.slot = slotsFor(bk.day, bk.treat.dur).find((s) => s.key === b.dataset.key); renderBooking();
+      bk.slot = slotsFor(bk.day, bk.treat).find((s) => s.key === b.dataset.key); renderBooking();
     });
     function renderSummary() {
       if (bk.done) return;
       $("#sumTitle").textContent = bk.treat.name;
       $("#sumDay").textContent = bk.day ? fmtDay(bk.day) : "—";
-      $("#sumHour").textContent = bk.slot ? pad(bk.slot.time.getHours()) + ":" + pad(bk.slot.time.getMinutes()) + " h" : "—";
+      $("#sumHour").textContent = bk.slot ? bk.slot.label + " h" : "—";
       $("#sumDur").textContent = bk.treat.dur + " min";
       $("#sumPrice").textContent = money(bk.treat.price);
       $("#sumNote").textContent = bk.treat.note || "";
-      $("#bkConfirm").disabled = !(bk.day && bk.slot);
+      $("#bkConfirm").disabled = !(bk.day && bk.slot) || bk.sending;
     }
     function renderBooking() { renderCal(); renderSlots(); renderSummary(); }
-    $("#bkConfirm").addEventListener("click", () => {
-      const name = $("#bkName").value.trim(), phone = $("#bkPhone").value.replace(/\D/g, "");
-      const err = $("#bkErr");
-      if (name.length < 3) { err.textContent = "Escribí tu nombre y apellido para reservar."; $("#bkName").focus(); return; }
-      if (phone.length < 8) { err.textContent = "Escribí tu número de WhatsApp para enviarte la confirmación."; $("#bkPhone").focus(); return; }
-      err.textContent = "";
-      booked.add(bk.slot.key); store.set("juma_demo_booked", [...booked]);
+
+    function showDone(name, codigo) {
       bk.done = true;
-      const when = fmtDay(bk.day) + " a las " + pad(bk.slot.time.getHours()) + ":" + pad(bk.slot.time.getMinutes());
-      const msg = `Hola Carla! Reservé desde la web:\n• ${bk.treat.name}\n• ${when}\n• A nombre de ${name}` + ($("#bkNote").value.trim() ? `\n• Comentario: ${$("#bkNote").value.trim()}` : "");
+      const when = fmtDay(bk.day) + " a las " + bk.slot.label;
+      const msg = `Hola Carla! Reservé desde la web:\n• ${bk.treat.name}\n• ${when}\n• A nombre de ${name}` + (codigo ? `\n• Código: ${codigo}` : "");
       $("#bkSide").innerHTML = `
         <div class="done">
           <div class="done-icon"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6"><path d="m5 12 4.5 4.5L19 7"/></svg></div>
@@ -186,19 +209,48 @@
           <h3>${name.split(" ")[0]}, te esperamos</h3>
           <div class="summary" style="width:100%">
             <div class="sum-row"><span>Tratamiento</span><span>${bk.treat.name}</span></div>
-            <div class="sum-row"><span>Cuándo</span><span>${when}</span></div>
+            <div class="sum-row"><span>Cuándo</span><span>${when} h</span></div>
             <div class="sum-row"><span>Dónde</span><span>Fragata Argentina 2063, of. 3</span></div>
+            ${codigo ? `<div class="sum-row"><span>Código</span><span><strong>${codigo}</strong></span></div>` : ""}
           </div>
           ${bk.treat.note ? `<p class="policy">${bk.treat.note}</p>` : ""}
-          <p class="policy">En la versión final, el turno se agenda solo y te llega la confirmación por WhatsApp. En esta demo podés avisarle a Carla con el botón.</p>
-          <a class="btn btn-solid" href="https://wa.me/${WA}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">Avisar por WhatsApp</a>
+          <p class="policy">${API ? "Tu turno ya quedó agendado. Si necesitás cambiarlo o cancelarlo, escribinos por WhatsApp." : "Esta es una demostración: el turno no se agenda. Podés avisarle a Carla con el botón."}</p>
+          <a class="btn btn-solid" href="https://wa.me/${WA}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">${API ? "Guardar el turno en WhatsApp" : "Avisar por WhatsApp"}</a>
           <button class="btn btn-line" id="bkAgain" type="button">Reservar otro turno</button>
         </div>`;
       $("#bkAgain").addEventListener("click", () => location.reload());
-      renderCal(); renderSlots();
-      toast("Turno reservado (demo)");
+    }
+
+    $("#bkConfirm").addEventListener("click", async () => {
+      const name = $("#bkName").value.trim(), phone = $("#bkPhone").value.replace(/\D/g, "");
+      const err = $("#bkErr");
+      if (name.length < 3) { err.textContent = "Escribí tu nombre y apellido para reservar."; $("#bkName").focus(); return; }
+      if (phone.length < 8) { err.textContent = "Escribí tu número de WhatsApp para poder contactarte."; $("#bkPhone").focus(); return; }
+      err.textContent = "";
+      if (!API) {
+        booked.add(bk.slot.key); store.set("juma_demo_booked", [...booked]);
+        showDone(name, ""); renderCal(); renderSlots(); toast("Turno reservado (demo)"); return;
+      }
+      const btn = $("#bkConfirm");
+      bk.sending = true; btn.disabled = true; btn.textContent = "Reservando…";
+      try {
+        const r = await fetch(API, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },   // texto plano: evita el pedido previo de permisos (CORS)
+          body: JSON.stringify({ servicio: bk.treat.id, fecha: iso(bk.day), hora: bk.slot.label, nombre: name, telefono: phone,
+                                 comentario: $("#bkNote").value.trim(), web: $("#bkWeb") ? $("#bkWeb").value : "" })
+        });
+        const j = await r.json();
+        if (j.ok) { showDone(name, j.codigo); toast("¡Turno reservado!"); return; }
+        err.textContent = j.error || "No pudimos reservar. Probá de nuevo.";
+        if (j.ocupado) { bk.slot = null; await refresh(true); }
+      } catch (e) {
+        err.textContent = "No pudimos reservar por un problema de conexión. Probá de nuevo o escribinos por WhatsApp.";
+      } finally {
+        bk.sending = false; btn.textContent = "Confirmar turno"; renderSummary();
+      }
     });
-    renderBooking();
+    refresh();
   }
 
   /* ---------------- página Gift card: pedido por WhatsApp ---------------- */

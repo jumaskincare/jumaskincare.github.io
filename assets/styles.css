@@ -556,3 +556,4 @@ body.menu-open { overflow: hidden; }
 .gift-band:hover .mini-gc:not(.back) { transform: translate(-50%, -54%) rotate(-2deg); }
 @media (max-width: 760px) { .gift-band { grid-template-columns: 1fr; border-radius: 22px; } .gb-visual { height: 210px; } }
 .menu-panel .wrap { width: 100%; }
+.cal.is-loading { opacity: .5; pointer-events: none; }
