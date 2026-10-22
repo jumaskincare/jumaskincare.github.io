@@ -39,6 +39,10 @@
       desc: "Permeación profunda de principios activos (ácido hialurónico, vitaminas y boosters) sin agujas." },
     { id: "peeling", name: "Peelings progresivos", dur: 45, price: 40000, cat: "facial", icon: "layers",
       desc: "Renovación celular guiada para atenuar manchas, líneas finas y unificar el tono de la piel.", note: "Requiere una higiene facial previa. No depilarse 2 días antes." },
+    { id: "pdrn_salmon", name: "PDRN salmón", dur: 45, price: 50000, cat: "facial", icon: "spiral",
+      desc: "Bioestimulación con PDRN de salmón para regenerar, reparar e hidratar la piel en profundidad." },
+    { id: "plasma", name: "Plasma", dur: 45, price: null, cat: "facial", icon: "spark", consult: true,
+      desc: "Tratamiento regenerador que se indica según el estado de tu piel. Consultanos y Carla te asesora." },
     /* ---- modelado y corporales ---- */
     { id: "modelado", name: "Modelado y tonificación integral", dur: 60, price: null, cat: "corporal", icon: "body", consult: true,
       desc: "Protocolos diseñados para mejorar la firmeza, la elasticidad y la textura de la piel." },
