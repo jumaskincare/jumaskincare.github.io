@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Reservar turno · Juma Skincare</title>
+<meta name="description" content="Reservá tu turno online en Juma Skincare: elegí tratamiento, día y horario libre.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@200;300;400;500&family=Marcellus&display=swap">
+<link rel="stylesheet" href="assets/styles.css">
+<script>document.documentElement.classList.add("js")</script>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<div class="demo-bar"><div class="wrap">Propuesta de diseño · Las reservas de esta versión son de demostración</div></div>
+<header class="top" id="top">
+  <div class="wrap top-row">
+    <button class="menu-toggle" id="menuBtn" aria-expanded="false" aria-controls="menuPanel">
+      <span class="burger" aria-hidden="true"><i></i><i></i></span><span class="menu-label">Menú</span>
+    </button>
+    <a class="brand" href="index.html" aria-label="Juma Skincare, inicio">
+      <span class="brand-word">J<span class="u">U</span>MA</span>
+      <span class="brand-sub">SKINCARE PROFESIONAL</span>
+    </a>
+    <a class="top-book" href="reservar.html" aria-current="page">Reservar<span class="hide-s"> turno</span></a>
+  </div>
+</header>
+<div class="menu-panel" id="menuPanel" role="dialog" aria-modal="true" aria-label="Menú" hidden>
+  <div class="wrap top-row">
+    <button class="menu-toggle" id="menuClose"><span class="burger is-x" aria-hidden="true"><i></i><i></i></span><span class="menu-label">Cerrar</span></button>
+    <a class="brand" href="index.html" aria-label="Juma Skincare, inicio"><span class="brand-word">J<span class="u">U</span>MA</span><span class="brand-sub">SKINCARE PROFESIONAL</span></a>
+    <a class="top-book" href="reservar.html">Reservar<span class="hide-s"> turno</span></a>
+  </div>
+  <div class="wrap menu-body">
+    <nav aria-label="Secciones"><ul class="menu-list">
+        <li style="--i:1"><a href="index.html"><span class="mn">01</span><span class="mt">Inicio</span></a></li>
+        <li style="--i:2"><a href="tratamientos.html"><span class="mn">02</span><span class="mt">Tratamientos</span></a></li>
+        <li style="--i:3"><a href="estudio.html"><span class="mn">03</span><span class="mt">El estudio</span></a></li>
+        <li style="--i:4"><a href="giftcard.html"><span class="mn">04</span><span class="mt">Gift card</span></a></li>
+        <li style="--i:5"><a href="contacto.html"><span class="mn">05</span><span class="mt">Contacto</span></a></li>
+    </ul></nav>
+    <div class="menu-aside">
+      <div><div class="eyebrow">Visitanos</div><p>Fragata Argentina 2063<br>Oficina 3, 1er piso · Pilar</p></div>
+      <div><div class="eyebrow">Horarios</div><p>Lun a vie 9 a 16:30 y 18 a 20 h<br>Sábados 8 a 15 h</p></div>
+      <div class="menu-social"><a href="https://wa.me/5491139037489" target="_blank" rel="noopener">WhatsApp</a><a href="https://www.instagram.com/juma.skincare/" target="_blank" rel="noopener">Instagram</a><a href="https://share.google/rtIwu5izzURgPClUn" target="_blank" rel="noopener">Google Maps</a></div>
+    </div>
+  </div>
+</div>
+
+<main>
+  <section class="page-hero">
+    <div class="wrap">
+      <div class="crumbs"><a href="index.html">Inicio</a> &nbsp;/&nbsp; Reservar turno</div>
+      <h1 class="page-title">Reservá <em>tu turno</em></h1>
+      <p class="lead">Solo te mostramos los horarios libres. Al confirmar, te llega todo por WhatsApp.</p>
+    </div>
+  </section>
+  <section class="page-body">
+    <div class="wrap">
+      <div class="booking">
+        <div class="bk-main" id="bkMain">
+          <div class="bk-step">
+            <label class="bk-label" for="bkTreat"><span>01</span> Tratamiento</label>
+            <select id="bkTreat"></select>
+          </div>
+          <div class="bk-step">
+            <div class="bk-label"><span>02</span> Día</div>
+            <div class="cal-head">
+              <strong id="calTitle"></strong>
+              <div class="cal-nav">
+                <button id="calPrev" aria-label="Mes anterior">‹</button>
+                <button id="calNext" aria-label="Mes siguiente">›</button>
+              </div>
+            </div>
+            <div class="cal" id="cal" role="grid" aria-label="Calendario"></div>
+            <p class="hint">Atendemos de lunes a sábado. Podés reservar hasta 30 días para adelante.</p>
+          </div>
+          <div class="bk-step">
+            <div class="bk-label"><span>03</span> Horario</div>
+            <div class="slots" id="slots"></div>
+            <p class="hint" id="slotsHint">Elegí un día para ver los horarios libres.</p>
+          </div>
+          <div class="bk-step">
+            <div class="bk-label"><span>04</span> Tus datos</div>
+            <form id="bkForm" novalidate>
+              <div class="fields">
+                <label>Nombre y apellido<input type="text" id="bkName" autocomplete="name" placeholder="Ej.: Ana López"></label>
+                <label>WhatsApp<input type="tel" id="bkPhone" autocomplete="tel" placeholder="Ej.: 11 2345 6789"></label>
+                <label class="full">Comentario (opcional)<textarea id="bkNote" placeholder="Algo que Carla deba saber antes de tu sesión"></textarea></label>
+              </div>
+              <p class="err" id="bkErr" role="alert"></p>
+            </form>
+          </div>
+        </div>
+        <aside class="bk-side" id="bkSide" aria-live="polite">
+          <div class="eyebrow">Tu turno</div>
+          <h3 id="sumTitle">Elegí un tratamiento</h3>
+          <div class="summary">
+            <div class="sum-row"><span>Día</span><span id="sumDay">—</span></div>
+            <div class="sum-row"><span>Horario</span><span id="sumHour">—</span></div>
+            <div class="sum-row"><span>Duración</span><span id="sumDur">—</span></div>
+            <div class="sum-row"><span>Precio</span><span id="sumPrice">—</span></div>
+          </div>
+          <p class="policy" id="sumNote"></p>
+          <button class="btn btn-solid" id="bkConfirm" disabled>Confirmar turno</button>
+          <p class="policy">Podés reprogramar sin costo hasta 24 h antes. Para cancelar, escribinos por WhatsApp.</p>
+        </aside>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <div class="brand"><span class="brand-word">J<span class="u">U</span>MA</span><span class="brand-sub">SKINCARE PROFESIONAL</span></div>
+        <p class="tagline">Tratamientos faciales y corporales con diagnóstico personalizado, en Pilar.</p>
+      </div>
+      <div>
+        <h4>Explorar</h4>
+        <ul><li><a href="tratamientos.html">Tratamientos</a></li><li><a href="estudio.html">El estudio</a></li><li><a href="giftcard.html">Gift card</a></li><li><a href="contacto.html">Contacto</a></li></ul>
+      </div>
+      <div>
+        <h4>Visitanos</h4>
+        <p>Fragata Argentina 2063<br>Oficina 3, 1er piso · Pilar</p>
+        <p style="margin-top:10px">Lun a vie 9 a 16:30 y 18 a 20 h<br>Sábados 8 a 15 h</p>
+      </div>
+      <div>
+        <h4>Turnos</h4>
+        <ul><li><a href="reservar.html">Reservar online</a></li><li><a href="https://wa.me/5491139037489" target="_blank" rel="noopener">WhatsApp 11 3903-7489</a></li><li><a href="https://www.instagram.com/juma.skincare/" target="_blank" rel="noopener">Instagram @juma.skincare</a></li><li><a href="contacto.html">Preguntas frecuentes</a></li></ul>
+      </div>
+    </div>
+    <div class="foot-bottom"><small>© 2026 Juma Skincare · Pilar, Buenos Aires</small><small>jumaskincare.com.ar</small></div>
+  </div>
+</footer>
+
+<div class="toast" id="toast" role="status"></div>
+<script src="assets/app.js"></script>
+</body>
+</html>
