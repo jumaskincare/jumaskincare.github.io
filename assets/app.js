@@ -348,6 +348,16 @@
     refresh();
   }
 
+  /* ---------------- asistencia.html: link "✓ Confirmó" del resumen diario de Carla ---------------- */
+  if ($("#asistencia")) {
+    const q = new URLSearchParams(location.search), box = $("#asistencia");
+    const show = (ok, t) => { box.innerHTML = `<div class="done">${ok ? CHECK : ""}<div class="eyebrow">${ok ? "Asistencia confirmada" : "No se pudo marcar"}</div><h3>${t}</h3>
+      <p class="policy">${ok ? "El turno quedó en verde en el calendario." : "Probá de nuevo desde el mail del resumen."}</p></div>`; };
+    if (!API || !q.get("id") || !q.get("k")) show(false, "Link incompleto");
+    else fetch(API + "?accion=asistencia&json=1&id=" + encodeURIComponent(q.get("id")) + "&k=" + encodeURIComponent(q.get("k")))
+      .then((r) => r.json()).then((j) => show(!!j.ok, j.mensaje || "Error")).catch(() => show(false, "Sin conexión. Probá de nuevo."));
+  }
+
   /* ---------------- página Gift card: pedido por WhatsApp ---------------- */
   if ($("#gcForm")) {
     let gcAmount = GIFT_AMOUNTS[0];
