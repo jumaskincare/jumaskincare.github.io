@@ -134,7 +134,7 @@
             <span class="price">${t.consult ? "<small class=\"price-tbd\">Valor según diagnóstico</small>" : money(t.price)}</span>
             ${t.consult
               ? `<a class="btn btn-line btn-sm" href="https://wa.me/${WA}?text=${encodeURIComponent("Hola Carla! Quería consultar por " + t.name + ".")}" target="_blank" rel="noopener">Consultar</a>`
-              : `<a class="btn btn-solid btn-sm" href="reservar.html?t=${t.id}">Reservar</a>`}
+              : `<a class="btn btn-solid btn-sm" href="/reservar?t=${t.id}">Reservar</a>`}
           </div>
         </article>`).join("");
     };
@@ -181,7 +181,7 @@
         ${t.nota ? `<p class="policy">${t.nota}</p>` : ""}
         <p class="policy">${API ? "Tu turno ya quedó agendado. El día anterior te escribimos por WhatsApp para recordártelo. Si necesitás cambiarlo, escribinos al 11 3903-7489." : "Esta es una demostración: el turno no se agenda."}</p>
         ${calLinks(t)}
-        <a class="btn btn-solid" href="index.html">Volver al inicio</a>
+        <a class="btn btn-solid" href="/">Volver al inicio</a>
       </div>`;
   }
 
@@ -206,7 +206,7 @@
       if (j.ok && j.estado === "vencido") {
         box.innerHTML = `<div class="done"><div class="eyebrow">Turno no confirmado</div><h3>Se venció el tiempo para pagar</h3>
           <p class="policy">Como no recibimos la seña a tiempo, liberamos el horario. Si pagaste y ves este mensaje, escribinos por WhatsApp con el código <strong>${codigo}</strong>.</p>
-          <a class="btn btn-solid" href="reservar.html">Elegir otro horario</a>
+          <a class="btn btn-solid" href="/reservar">Elegir otro horario</a>
           <a class="btn btn-line" href="https://wa.me/${WA}?text=${encodeURIComponent("Hola Carla! Tuve un problema con la seña del turno " + codigo + ".")}" target="_blank" rel="noopener">Escribir por WhatsApp</a></div>`;
         return;
       }
@@ -453,7 +453,7 @@
           <li><span>El día del turno se descuenta del valor de la gift card. Válida hasta el ${esc(g.vence)}.</span></li>
         </ol>
         <div class="gift-actions">
-          <a class="btn btn-solid" href="reservar.html?gc=${encodeURIComponent(g.codigo)}&t=limpieza_primera">Reservar mi turno</a>
+          <a class="btn btn-solid" href="/reservar?gc=${encodeURIComponent(g.codigo)}&t=limpieza_primera">Reservar mi turno</a>
           <button class="btn btn-line" type="button" id="rgSave">Guardar como imagen</button>
         </div>`;
       $("#rgSave").addEventListener("click", async (e) => {
