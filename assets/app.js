@@ -254,7 +254,7 @@
         const g = await (await fetch(API + "?accion=giftcard&codigo=" + encodeURIComponent(code))).json();
         if (g.ok && g.valida) {
           bk.gift = g; $("#gcCode").value = g.codigo;
-          gcMsg(`✓ Gift card válida${g.para ? " de " + g.para : ""} · saldo ${money(g.saldo)} · vence ${g.vence}. No pagás seña.`, true);
+          gcMsg(`✓ Gift card válida${g.para ? " de " + g.para : ""} · saldo ${money(g.saldo)} · vence ${g.vence}. Queda aplicada a tu turno.`, true);
         } else gcMsg(g.motivo || "No encontramos esa gift card. Revisá el código.", false);
       } catch (e) { gcMsg("No pudimos validarla. Probá de nuevo.", false); }
       renderSummary();
@@ -449,7 +449,7 @@
         ${g.saldo < g.monto ? `<p class="gift-from">Saldo disponible: <strong>${money(g.saldo)}</strong></p>` : ""}
         <ol class="gift-steps">
           <li><span>Tocá <strong>Reservar mi turno</strong> y elegí el tratamiento, el día y el horario.</span></li>
-          <li><span>Tu código <strong>${esc(g.codigo)}</strong> ya queda cargado: no pagás seña.</span></li>
+          <li><span>Tu código <strong>${esc(g.codigo)}</strong> ya queda cargado al reservar.</span></li>
           <li><span>El día del turno se descuenta del valor de la gift card. Válida hasta el ${esc(g.vence)}.</span></li>
         </ol>
         <div class="gift-actions">
