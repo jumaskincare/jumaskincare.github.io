@@ -623,3 +623,19 @@ body.menu-open { overflow: hidden; }
 .gc-row input { flex: 1; text-transform: uppercase; letter-spacing: .08em; }
 .gc-ok { font-size: 14px; color: var(--sage-deep); }
 .gc-err { font-size: 14px; color: var(--warn); }
+
+/* ---------- reserva: el resumen con "Confirmar turno" acompaña el scroll (compu) ---------- */
+@media (min-width: 861px) {
+  .booking { overflow: clip; background: linear-gradient(to right, var(--surface) 57.5%, var(--sage-soft) 57.5%); }
+  .bk-side { position: sticky; top: 96px; align-self: start; }
+}
+.top-book-ph { justify-self: end; }
+
+/* ---------- monitores grandes: mismo margen para menú, contenido y pie, alineados a los bordes ---------- */
+.wrap, .top .wrap.top-row, .menu-panel .wrap, .foot .wrap { max-width: 1720px; padding-left: max(20px, 3.5vw, env(safe-area-inset-left, 0px)); padding-right: max(20px, 3.5vw, env(safe-area-inset-right, 0px)); }
+@media (min-width: 1500px) {
+  .home-hero .wrap { gap: 120px; }
+  .hh-visual { width: min(100%, 560px); }
+  .treat-grid { grid-template-columns: repeat(4, 1fr); }
+}
+html, .home-hero { overflow-x: clip; }
