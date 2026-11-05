@@ -430,7 +430,7 @@
     const info = $("#regaloInfo"), card = $("#jcard");
     const esc = (t) => String(t || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
     const fail = (t) => { card.classList.add("is-off"); info.innerHTML = `<div class="eyebrow">Gift card</div><h1 class="page-title" style="font-size:clamp(34px,4.4vw,56px)">${t}</h1>
-      <div class="gift-actions"><a class="btn btn-solid" href="https://wa.me/${WA}" target="_blank" rel="noopener">Escribinos por WhatsApp</a></div>`; };
+      <div class="gift-actions"><a class="btn btn-solid" href="https://wa.me/${WA}?text=${encodeURIComponent("Hola Carla! Recibí una gift card de Juma 🎁 y quería coordinar mi turno." + (code ? " Código: " + code : ""))}" target="_blank" rel="noopener">Escribinos por WhatsApp</a></div>`; };
     if (!API || !code) fail("No encontramos esta gift card");
     else fetch(API + "?accion=giftcard&codigo=" + encodeURIComponent(code)).then((r) => r.json()).then((g) => {
       if (!g.ok || !g.codigo) { fail(g.motivo || "No encontramos esta gift card"); return; }
